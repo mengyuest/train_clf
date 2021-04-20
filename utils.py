@@ -1,13 +1,11 @@
-import os
 from os.path import join as ospj
 import sys
 import time
 from datetime import datetime
+import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 
-# TODO argparser
-# TODO mkdir
-# TODO logger
 class Logger(object):
     def __init__(self):
         self._terminal = sys.stdout
@@ -92,8 +90,47 @@ def get_exp_dir():
     elif "realm" in host_name:
         return '/home/meng/%s/'%(EXP_DIR)
     else:
-        exit("unrecognized hostname: %s" % (host_name))
+        exit("unrecognized hostname: %s - you can set exp root dir by modifying --exp_root_dir" % (host_name))
 
 
-def cap(l, max_value):
-    return [min(x, max_value) for x in l]
+def viz_graph(prev_s, curr_s, dbg_t, viz_path):
+    # # TODO Debug only
+    # dbg_len = 300
+    # s = s_list
+    # s = torch.from_numpy(s).float().cuda()
+    # prev_s = None
+    # for dbg_t in range(dbg_len):
+    #     u = actor(s)
+    #     s_next = dynamics(s, u, args)
+    #     prev_s = s
+    #     s = s_next
+
+    # plot previous
+    prev_s = prev_s.detach().cpu().numpy()
+    th = np.arctan2(prev_s[:, 1], prev_s[:, 0])
+    thdot = prev_s[:, 2]
+    plt.figure(figsize=(6, 6))
+    plt.scatter(th, thdot)
+    plt.axis('scaled')
+    plt.xlim(-2*np.pi, 2*np.pi)
+    plt.ylim(-8.0, 8.0)
+    plt.savefig(ospj(viz_path,"dbg_%03d.png"%(dbg_t)))
+    plt.close()
+
+    # plot vector field
+    curr_s = curr_s.detach().cpu().numpy()
+    th1 = np.arctan2(curr_s[:, 1], curr_s[:, 0])
+    thdot1 = curr_s[:, 2]
+
+    plt.figure(figsize=(6, 6))
+    th_vec = th1 - th
+    thdot_vec = thdot1 - thdot
+    C = np.hypot(th_vec, thdot_vec)
+    th_norm = th_vec / C
+    thdot_norm = thdot_vec / C
+
+    Q = plt.quiver(th, thdot, th_norm, thdot_norm, C, units='xy', cmap=cm.gnuplot)
+    plt.colorbar()
+
+    plt.savefig(ospj(viz_path, "vec_%03d.png" % (dbg_t)))
+    plt.close()
